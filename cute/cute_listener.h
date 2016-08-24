@@ -22,14 +22,18 @@
 #define CUTE_LISTENER_H_
 #include "cute_base.h"
 #include "cute_suite.h"
+#include "cute_determine_chrono.h"
 namespace cute {
+  namespace chrono = impl_place_for_chrono::chrono;
+  typedef chrono::steady_clock clock;
+
 	struct null_listener{ // defines Contract of runner parameter
-		void begin(suite const &, char const * /*info*/, size_t /*n_of_tests*/){}
-		void end(suite const &, char const * /*info*/){}
-		void start(test const &){}
-		void success(test const &,char const * /*msg*/){}
-		void failure(test const &,test_failure const &){}
-		void error(test const &,char const * /*what*/){}
+		void begin(suite const &, char const * /*info*/, size_t /*n_of_tests*/, clock::time_point const & /*start_time*/){}
+		void end(suite const &, char const * /*info*/, clock::time_point const & /*end_time*/){}
+		void start(test const &, clock::time_point const & /*start_time*/){}
+		void success(test const &,char const * /*msg*/, clock::time_point const & /*end_time*/){}
+		void failure(test const &,test_failure const &, clock::time_point const & /*end_time*/){}
+		void error(test const &,char const * /*what*/, clock::time_point const & /*end_time*/){}
 	};
 }
 #endif /* CUTE_LISTENER_H_ */

@@ -28,31 +28,40 @@ namespace cute {
 	struct ostream_listener:Listener
 	{
 		std::ostream &out;
+    clock::time_point suite_start;
+    clock::time_point test_start;
 	public:
 		ostream_listener(std::ostream &os=std::cerr):out(os) {}
-		void begin(suite const &t,char const *info, size_t n_of_tests){
+		void begin(suite const &t,char const *info, size_t n_of_tests, clock::time_point const & start_time){
 			out << "beginning: " << info << std::endl;
-			Listener::begin(t,info, n_of_tests);
+			suite_start = start_time;
+			Listener::begin(t,info, n_of_tests, start_time);
 		}
-		void end(suite const &t, char const *info){
-			out << "ending: " << info << std::endl;
-			Listener::end(t,info);
+		void end(suite const &t, char const *info, clock::time_point const & end_time){
+			chrono::milliseconds time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - suite_start);
+			out << "ending: " << info << " (took " << time_taken.count() << "ms)" << std::endl;
+			Listener::end(t,info,end_time);
 		}
-		void start(test const &t){
+		void start(test const &t, clock::time_point const & start_time){
 			out << "starting: " << t.name() << std::endl;
-			Listener::start(t);
+			test_start = start_time;
+			Listener::start(t, start_time);
 		}
-		void success(test const &t, char const *msg){
-			out << t.name() << " " << msg << std::endl;
-			Listener::success(t,msg);
+		void success(test const &t, char const *msg, clock::time_point const & end_time){
+			chrono::milliseconds time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - test_start);
+			out << t.name() << " " << msg << " (took " << time_taken.count() << "ms)" << std::endl;
+			Listener::success(t,msg,end_time);
 		}
-		void failure(test const &t,test_failure const &e){
-			out << std::dec << e.filename << ":" << e.lineno << ": testcase failed: " << e.reason << " in " << t.name() << std::endl;
-			Listener::failure(t,e);
+		void failure(test const &t,test_failure const &e, clock::time_point const & end_time){
+			chrono::milliseconds time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - test_start);
+			out << std::dec << e.filename << ":" << e.lineno << ": testcase failed: " << e.reason << " in " << t.name()
+				<< " (took " << time_taken.count() << "ms)" << std::endl;
+			Listener::failure(t,e,end_time);
 		}
-		void error(test const &t, char const *what){
-			out << what << " in " << t.name() << std::endl;
-			Listener::error(t,what);
+		void error(test const &t, char const *what, clock::time_point const & end_time = clock::now()){
+			chrono::milliseconds time_taken = chrono::duration_cast<chrono::milliseconds>(end_time - test_start);
+			out << what << " in " << t.name() << " (took " << time_taken.count() << "ms)" << std::endl;
+			Listener::error(t,what,end_time);
 		}
 	};
 }

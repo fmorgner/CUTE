@@ -33,34 +33,34 @@ namespace cute {
 	struct ide_listener: public Listener
 	{
 		ide_listener(std::ostream &os=std::cout):out(os) {}
-		void begin(suite const &t,char const *info, size_t n_of_tests){
+		void begin(suite const &t,char const *info, size_t n_of_tests, clock::time_point const & start_time){
 			out << std::dec << "\n#beginning " << info << " " << n_of_tests << '\n';
-			Listener::begin(t,info,n_of_tests);
+			Listener::begin(t,info,n_of_tests,start_time);
 		}
-		void end(suite const &t, char const *info){
+		void end(suite const &t, char const *info, clock::time_point const & end_time){
 			out << "\n#ending " << info << std::endl;
-			Listener::end(t,info);
+			Listener::end(t,info,end_time);
 		}
-		void start(test const &t){
+		void start(test const &t, clock::time_point const & start_time){
 			out << "\n#starting " << t.name()<<'\n';
-			Listener::start(t);
+			Listener::start(t, start_time);
 		}
-		void success(test const &t, char const *msg){
+		void success(test const &t, char const *msg, clock::time_point const & end_time){
 			out << "\n#success " <<  maskBlanks(t.name()) <<" " << msg<< '\n';
-			Listener::success(t,msg);
+			Listener::success(t,msg,end_time);
 		}
-		void failure(test const &t,test_failure const &e){
+		void failure(test const &t,test_failure const &e, clock::time_point const & end_time){
 			out << std::dec <<  "\n#failure " << maskBlanks(t.name()) << " " << e.filename << ":" << e.lineno << " " << (e.reason) << '\n';
-			Listener::failure(t,e);
+			Listener::failure(t,e,end_time);
 #ifdef _MSV_VER
 			std::ostringstream os;
 			os << std::dec << e.filename << "(" << e.lineno << ") : failure: " <<e.reason << " in " << t.name()<< std::endl;
 			OutputDebugString(os.str().c_str());
 #endif
 		}
-		void error(test const &t, char const *what){
+		void error(test const &t, char const *what, clock::time_point const & end_time){
 			out << "\n#error " << maskBlanks(t.name()) << " " << what <<'\n';
-			Listener::error(t,what);
+			Listener::error(t,what,end_time);
 #ifdef _MSV_VER
 			std::ostringstream os;
 			os << what << " error in " << t.name() << std::endl;

@@ -22,7 +22,9 @@
 #define XML_LISTENER_H_
 #include "cute_listener.h"
 #include "cute_xml_file.h" // for convenience
+#include <iomanip>
 #include <ostream>
+#include <sstream>
 namespace cute {
 	template <typename Listener=null_listener>
 	class xml_listener:public Listener
@@ -46,8 +48,19 @@ namespace cute {
 			}
 			return in;
 		}
+
+		void write_time_attribute(chrono::milliseconds const & duration, std::ostream & dest) {
+			std::ios_base::fmtflags old = dest.flags();
+			dest << std::dec << std::fixed << std::setprecision(3);
+			dest << " time=\"" << duration.count() / 1000.f << '"';
+			dest.setf(old);
+		}
+
 		std::ostream &out;
 		std::string current_suite;
+		std::ostringstream test_buffer;
+		clock::time_point suite_start;
+		clock::time_point test_start;
 	public:
 		xml_listener(std::ostream &os):out(os) {
 			out << "<testsuites>\n";
@@ -56,34 +69,44 @@ namespace cute {
 			out << "</testsuites>\n"<< std::flush;
 		}
 
-		void begin(suite const &t,char const *info, size_t n_of_tests){
+		void begin(suite const &t,char const *info, size_t n_of_tests, clock::time_point const & start_time){
 			current_suite=mask_xml_chars(info);
-			out << std::dec << "\t<testsuite name=\"" << current_suite << "\" tests=\"" << n_of_tests << "\">\n";
-			Listener::begin(t,info, n_of_tests);
+			suite_start = start_time;
+			out << std::dec << "\t<testsuite name=\"" << current_suite << "\" tests=\"" << n_of_tests << "\"";
+			Listener::begin(t,info, n_of_tests, start_time);
 		}
-		void end(suite const &t, char const *info){
+		void end(suite const &t, char const *info, clock::time_point const & end_time){
+			write_time_attribute(chrono::duration_cast<chrono::milliseconds>(end_time - suite_start), out);
+			out << ">\n";
+			out << test_buffer.str();
 			out << "\t</testsuite>\n";
 			current_suite.clear();
-			Listener::end(t,info);
+			test_buffer.clear();
+			test_buffer.str("");
+			Listener::end(t,info, end_time);
 		}
-		void start(test const &t){
-			out << "\t\t<testcase classname=\""<<current_suite <<"\" name=\""<< mask_xml_chars(t.name())<<"\"";
-			Listener::start(t);
+		void start(test const &t, clock::time_point const & start_time){
+			test_buffer << "\t\t<testcase classname=\""<<current_suite <<"\" name=\""<< mask_xml_chars(t.name())<<"\"";
+			test_start = start_time;
+			Listener::start(t, start_time);
 		}
-		void success(test const &t, char const *msg){
-			out << "/>\n";
-			Listener::success(t,msg);
+		void success(test const &t, char const *msg, clock::time_point const & end_time){
+			write_time_attribute(chrono::duration_cast<chrono::milliseconds>(end_time - test_start), test_buffer);
+			test_buffer << "/>\n";
+			Listener::success(t,msg,end_time);
 		}
-		void failure(test const &t,test_failure const &e){
-			out << std::dec <<  ">\n\t\t\t<failure message=\"" << mask_xml_chars(e.filename) << ":" << e.lineno << " "
+		void failure(test const &t,test_failure const &e, clock::time_point const & end_time){
+			write_time_attribute(chrono::duration_cast<chrono::milliseconds>(end_time - test_start), test_buffer);
+			test_buffer << std::dec <<  ">\n\t\t\t<failure message=\"" << mask_xml_chars(e.filename) << ":" << e.lineno << " "
 				<< mask_xml_chars(e.reason) << "\">\n"<<mask_xml_chars(e.reason)<<"\n\t\t\t</failure>\n\t\t</testcase>\n";
-			Listener::failure(t,e);
+			Listener::failure(t,e,end_time);
 		}
-		void error(test const &t, char const *what){
-			out << ">\n\t\t\t<error message=\"" << mask_xml_chars(t.name()) << " " << mask_xml_chars(what)
+		void error(test const &t, char const *what, clock::time_point const & end_time){
+			write_time_attribute(chrono::duration_cast<chrono::milliseconds>(end_time - test_start), test_buffer);
+			test_buffer << ">\n\t\t\t<error message=\"" << mask_xml_chars(t.name()) << " " << mask_xml_chars(what)
 				<< "\" type=\"unexpected exception\">\n"<<mask_xml_chars(what)
 				<<"\n\t\t\t</error>\n\t\t</testcase>\n";
-			Listener::error(t,what);
+			Listener::error(t,what,end_time);
 		}
 	};
 }

@@ -24,6 +24,7 @@
 #include "cute_suite.h"
 #include "cute_listener.h"
 #include "cute_determine_traits.h"
+#include "cute_determine_chrono.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -101,11 +102,11 @@ namespace cute {
 	        bool result = true;
 	        if(filter.shouldrunsuite){
 	            listener.begin(s, info,
-	            		count_if(s.begin(),s.end(),boost_or_tr1::bind(&runner_aux::ArgvTestFilter::shouldRun,filter,boost_or_tr1::bind(&test::name,_1))));
+				count_if(s.begin(),s.end(),boost_or_tr1::bind(&runner_aux::ArgvTestFilter::shouldRun,filter,boost_or_tr1::bind(&test::name,_1))), clock::now());
 	            for(suite::const_iterator it = s.begin();it != s.end();++it){
 	                if (filter.shouldRun(it->name())) result = this->runit(*it) && result;
 	            }
-	            listener.end(s, info);
+	            listener.end(s, info, clock::now());
 	        }
 
 	        return result;
@@ -120,20 +121,20 @@ namespace cute {
 	    bool runit(const test & t) const
 	    {
 	        try {
-	            listener.start(t);
+	            listener.start(t, clock::now());
 	            t();
-	            listener.success(t, "OK");
+	            listener.success(t, "OK", clock::now());
 	            return true;
 	        } catch(const cute::test_failure & e){
-	            listener.failure(t, e);
+	            listener.failure(t, e, clock::now());
 	        } catch(const std::exception & exc){
-	            listener.error(t, demangle(exc.what()).c_str());
+	            listener.error(t, demangle(exc.what()).c_str(), clock::now());
 	        } catch(std::string & s){
-	            listener.error(t, s.c_str());
+	            listener.error(t, s.c_str(), clock::now());
 	        } catch(const char *&cs) {
-				listener.error(t,cs);
+				listener.error(t,cs, clock::now());
 			} catch(...) {
-				listener.error(t,"unknown exception thrown");
+				listener.error(t,"unknown exception thrown", clock::now());
 			}
 			return false;
 		}
